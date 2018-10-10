@@ -1,0 +1,4 @@
+1，优量在线原版运行中，setup_logger.py---MultiprocessHandler()中---self.filePath = datetime.now().strftime(self.filefmt)因为原版是py2.7，改版成
+py3.X后，字符问题str-unicode，导致出错
+
+参考解决方法：time.strftime(u'%Y 年'.encode('unicode-escape').decode(), *args).encode().decode('unicode-escape')
