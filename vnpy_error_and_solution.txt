@@ -42,13 +42,18 @@ _filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').decode
 self.strategy_name = 'strategy_{}'.format(datetime.now().strftime('%H%M%S'))  # 回测策略的实例名字
 
 5、策略初始化数据问题
-因为ctaBacktesting.py回测引擎的loadBar()函数不需要传入参数，因此
-将ctaTemplate.py大约237行的loadBar()函数修改为:
+因为ctaBacktesting.py回测引擎的loadBar()函数不需要传入参数，因此，
+（1）将ctaBacktesting.py，大约2121行的loadBar(self)改为：
+    #----------------------------------------------------------------------
+    def loadBar(self):
+        """直接返回初始化数据列表中的Bar"""
+        return self.initData
+（2）将ctaTemplate.py大约237行的loadBar()函数修改为:
     #----------------------------------------------------------------------
     def loadBar(self):
         """读取bar数据"""
         return self.ctaEngine.loadBar()
- 同时策略文件def onInit(self)下面的
+ （3）同时策略文件def onInit(self)下面的
  initData = self.loadBar()里面无需输入参数
 
 
