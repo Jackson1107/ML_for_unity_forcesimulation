@@ -24,5 +24,16 @@ _filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').decode
 
 3、策略启动时间修改
 修改文件：ctaBacktesting.py，大约187行的setStartDate()函数
+修改为：
+    #----------------------------------------------------------------------
+    def setStartDate(self, startDate='20100416', initDays=10):
+        """设置回测的启动日期"""
+        # 储存参数
+        self.startDate = startDate  # 策略开始运行日期,"%Y%m%d"
+        self.initDays = initDays    # 策略初始化回放天数,int
+        # 策略开始运行的时间（即输入的时间）
+        self.strategyStartDate = datetime.strptime(startDate, '%Y%m%d')
+        # 数据准备时间(往前推initDays天)
+        self.dataStartDate = self.strategyStartDate - timedelta(initDays)
 
 
