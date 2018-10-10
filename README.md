@@ -1,2 +1,3 @@
-# ML_for_unity_forcesimulation
-使用unity做机器学习力学模拟
+# Notice From BitQuant
+
+bitquant工作记录和注意事项
