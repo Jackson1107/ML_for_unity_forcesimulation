@@ -105,3 +105,9 @@ t['CloseTime'] = datetime.strptime(trade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime
 self.capitalList.append(self.capningital)命名错误，没有self.capningital这玩意
 修改为：
 self.capitalList.append(self.capital)  我猜应该是self.capital的
+
+
+
+onInit()运行了两次
+
+
