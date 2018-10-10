@@ -63,4 +63,20 @@ for stopOrderID, so in self.workingStopOrderDict.items():
 for stopOrderID, so in list(self.workingStopOrderDict.items()):
 
 
+7，ctaBacktesting.py中的   crossStopOrder(self)方法和crossLimitOrder(self)中:
+大约为   1993行   以及    2065行
+分别把：
+buyCross = order.direction == DIRECTION_LONG and order.price >= buyCrossPrice and vtSymbol.lower() == order.vtSymbol.lower()
+sellCross = order.direction == DIRECTION_SHORT and order.price <= sellCrossPrice and vtSymbol.lower() == order.vtSymbol.lower()
+以及：
+buyCross = so.direction == DIRECTION_LONG and so.price <= buyCrossPrice and vtSymbol.lower() == so.vtSymbol.lower()
+sellCross = so.direction == DIRECTION_SHORT and so.price >= sellCrossPrice and vtSymbol.lower() == so.vtSymbol.lower()
+都改为：（都注释掉后面的名字判断）
+buyCross = order.direction == DIRECTION_LONG and order.price >= buyCrossPrice #and vtSymbol.lower() == order.vtSymbol.lower()
+sellCross = order.direction == DIRECTION_SHORT and order.price <= sellCrossPrice #and vtSymbol.lower() == order.vtSymbol.lower()
+以及：
+buyCross = so.direction == DIRECTION_LONG and so.price <= buyCrossPrice #and vtSymbol.lower() == so.vtSymbol.lower()
+sellCross = so.direction == DIRECTION_SHORT and so.price >= sellCrossPrice #and vtSymbol.lower() == so.vtSymbol.lower()
+
+
 
