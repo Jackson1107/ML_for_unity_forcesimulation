@@ -1,4 +1,4 @@
-一、字符串问题
+1、字符串问题
 优量在线原版运行中，setup_logger.py---MultiprocessHandler()中---self.filePath = datetime.now().strftime(self.filefmt)因为原版是py2.7，改版成
 py3.X后，字符问题str-unicode，导致出错
 
@@ -13,7 +13,16 @@ self.filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').de
 _filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').decode()).encode().decode('unicode-escape')
         
 
-二、策略启动时间修改
+2、增加初始资金设置
+修改文件：ctaBacktesting.py，大约在264行
+在 def setPriceTick(self, priceTick)下面新增函数：
+    # ----------------------------------------------------------------------
+    def setInitCapital(self, initCapital):
+        """设置初始资金"""
+        self.initCapital = initCapital
+
+
+3、策略启动时间修改
 修改文件：ctaBacktesting.py，大约187行的setStartDate()函数
 
 
