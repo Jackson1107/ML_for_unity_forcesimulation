@@ -80,3 +80,28 @@ sellCross = so.direction == DIRECTION_SHORT and so.price >= sellCrossPrice #and 
 
 
 
+8,ctaBacktesting.py中的   calculateBacktestingResult(self)方法中    大约2907行的
+t['OpenTime'] = entryTrade.tradeTime.strftime('%Y/%m/%d %H:%M:%S')
+修改为：
+t['OpenTime'] = datetime.strptime(entryTrade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime('%Y/%m/%d %H:%M:%S')
+
+t['CloseTime'] = trade.tradeTime.strftime('%Y/%m/%d %H:%M:%S')
+修改为：
+t['CloseTime'] = datetime.strptime(trade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime('%Y/%m/%d %H:%M:%S')
+
+同样，大约2836行也做同样修改：
+t['OpenTime'] = entryTrade.tradeTime.strftime('%Y/%m/%d %H:%M:%S')
+修改为：
+t['OpenTime'] = datetime.strptime(entryTrade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime('%Y/%m/%d %H:%M:%S')
+
+t['CloseTime'] = trade.tradeTime.strftime('%Y/%m/%d %H:%M:%S')
+修改为：
+t['CloseTime'] = datetime.strptime(trade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime('%Y/%m/%d %H:%M:%S')
+
+否则出现：AttributeError: 'str' object has no attribute 'strftime'  错误
+
+
+9，ctaBacktesting.py中的    calculateBacktestingResult(self)中     大约2983行
+self.capitalList.append(self.capningital)命名错误，没有self.capningital这玩意
+修改为：
+self.capitalList.append(self.capital)  我猜应该是self.capital的
