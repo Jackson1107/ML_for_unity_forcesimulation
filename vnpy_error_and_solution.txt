@@ -57,7 +57,10 @@ self.strategy_name = 'strategy_{}'.format(datetime.now().strftime('%H%M%S'))  # 
  initData = self.loadBar()里面无需输入参数
 
 
-
+6,ctaBacktesting.py中的   crossStopOrder(self)方法中  约2065行
+for stopOrderID, so in self.workingStopOrderDict.items():
+修改为：
+for stopOrderID, so in list(self.workingStopOrderDict.items()):
 
 
 
