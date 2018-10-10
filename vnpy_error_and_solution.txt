@@ -36,4 +36,15 @@ _filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').decode
         # 数据准备时间(往前推initDays天)
         self.dataStartDate = self.strategyStartDate - timedelta(initDays)
 
+4、修改策略实例名称
+修改文件：ctaBacktesting.py，大约76行
+多加一个"%H"
+self.strategy_name = 'strategy_{}'.format(datetime.now().strftime('%H%M%S'))  # 回测策略的实例名字
+
+
+
+
+
+
+
 
