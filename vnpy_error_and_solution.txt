@@ -1,4 +1,5 @@
-1，优量在线原版运行中，setup_logger.py---MultiprocessHandler()中---self.filePath = datetime.now().strftime(self.filefmt)因为原版是py2.7，改版成
+一、字符串问题
+优量在线原版运行中，setup_logger.py---MultiprocessHandler()中---self.filePath = datetime.now().strftime(self.filefmt)因为原版是py2.7，改版成
 py3.X后，字符问题str-unicode，导致出错
 
 参考解决方法：time.strftime(u'%Y 年'.encode('unicode-escape').decode(), *args).encode().decode('unicode-escape')
@@ -11,3 +12,8 @@ self.filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').de
 #以当前时间获得新日志文件路径
 _filePath = datetime.now().strftime(self.filefmt.encode('unicode-escape').decode()).encode().decode('unicode-escape')
         
+
+二、策略启动时间修改
+修改文件：ctaBacktesting.py，大约187行的setStartDate()函数
+
+
