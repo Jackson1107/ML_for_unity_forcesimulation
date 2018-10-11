@@ -1,0 +1,18 @@
+A，命名规范：
+
+  文件夹命名：第一个字母小写，之后每个单词首字母大写，中间没有下划线  如：ctaStrategy,riskManager
+  
+  文件命名：
+          py文件：第一个字母小写，之后每个单词首字母大写，中间没有下划线  如：ctaStrategy,riskManager
+          
+          配置文件，专业名词大写，单词间加下划线，如： CTA_setting.json，CMA_setting.json
+  
+  类名首单词字母均大写且中间没有下划线（class)：如：BacktestingEngine，StopOrder，CtaBarData
+  
+  函数方法命名(def)：第一个字母小写，之后每个单词首字母大写，中间没有下划线，如：getAccountInfo，setStartDate
+  
+  变量命名：
+          1，引擎固定常量：全大写，单词间用下划线分开，如：MINUTE_DB_NAME，TICK_MODE
+          2，普通变量：处专业名词大写外，全部小写，单词间用下划线分开，如：daily_report_name，last_leg1_tick
+          3，为了美观，下划线不超过两个，若超过3个单词的变量不使用下划线，改为首字母小写后面单词首字母大写：
+                  如：workingLimitOrderDict
