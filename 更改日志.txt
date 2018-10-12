@@ -12,7 +12,7 @@
 2、ctaBacktesing.py变动说明
 
 (1) 大约1838行, initStrategy()函数：
-注释掉self.strategy.onInit(), 原因是此时初始化数据还没准备好, 执行策略的初始化没有意义。
+删掉self.strategy.onInit(), 原因是此时初始化数据还没准备好, 执行策略的初始化没有意义。
 
 连接数据库、初始化数据读取部分大改
 
