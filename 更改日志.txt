@@ -1,4 +1,5 @@
 一、回测引擎更新日志1
+
 作者: 陈卓杰
 时间: 2018/10/12 12:03
 改动文件：runBacktesting.py, ctaBacktesting.py, ctaTemplate.py
@@ -89,6 +90,85 @@
     def loadBar(self):
         """读取bar数据"""
         return self.ctaEngine.loadBar()
+
+
+
+二、回测引擎更新日志2
+
+作者: 陈卓杰
+时间: 2018/10/xx xx:xx
+改动文件：runBacktesting.py, ctaBacktesting.py, ctaTemplate.py
+
+1、runBacktesting.py
+
+(1) 增加一个新的回测函数，runBacktestingSimple()，在1724行：
+    # ----------------------------------------------------------------------
+    def runBacktestingSimple(self):
+        """简单回测模式, 所有数据一次循环"""
+        # 更新设置期初资金
+        self.capital = self.initCapital
+
+        # 连接数据库
+        host, port, log = loadMongoSetting()
+        self.dbClient = pymongo.MongoClient(host, port)
+        self.dbCollection = self.dbClient[self.dbName][self.symbol]
+
+        # 首先根据回测模式，确认要使用的数据类
+        if self.mode == self.BAR_MODE:
+            dataClass = CtaBarData
+            func = self.newBar
+        else:
+            dataClass = CtaTickData
+            func = self.newTick
+
+        self.output(u'开始回测')
+        self.output(u'数据回放开始')
+
+        # 初始化策略
+        # 初始化数据的时间范围（前闭后开）
+        flt = {'datetime': {'$gte': self.dataStartDate,
+                            '$lt': self.strategyStartDate}}
+        # 读取数据
+        initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
+        self.initData = []
+        for d in initCursor:
+            data = dataClass()
+            data.__dict__ = d
+            self.initData.append(data)
+        # 策略执行初始化
+        self.strategy.onInit()
+        self.strategy.inited = True
+        self.output(u'策略初始化完成')
+
+        # 策略启动
+        self.strategy.onStart()
+        self.strategy.trading = True
+        self.output(u'策略启动完成')
+
+        # 读取回测数据
+        flt = {'datetime': {'$gte': self.strategyStartDate,
+                            '$lte': self.dataEndDate}}
+        dataCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
+        for d in dataCursor:
+            data = dataClass()
+            data.__dict__ = d
+            func(data)
+
+        self.output(u'数据回放结束')
+
+        # 断开数据库
+        self.dbClient.close()
+
+(2) 
+
+
+
+
+
+
+
+
+
 
 
 
