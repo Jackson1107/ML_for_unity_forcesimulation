@@ -3,6 +3,16 @@
 '''
 本文件中包含的是CTA模块的回测引擎，回测引擎的API和CTA引擎一致，
 可以使用和实盘相同的代码进行回测。
+
+最新修改日志：
+作者: 陈卓杰
+时间: 2018/10/12 12:06
+内容：
+(1) 策略开始时间和数据开始时间重写, 在setStartDate()函数;
+(2) 修改数据库连接的位置, 改到runBacktesting()函数里面;
+(3) 增添策略初始化数据推送部分, 在runBacktesting()函数里面;
+(4) calculateBacktestingResult()中计算组合收益的时候, 从策略实例中获取最小交易单位tradeUnit
+(5) 规范了排版格式
 '''
 from __future__ import division
 
@@ -10,6 +20,7 @@ import sys
 import os
 cta_engine_path = os.path.abspath(os.path.dirname(__file__))
 
+import time
 from datetime import datetime, timedelta
 from collections import OrderedDict
 from itertools import product
@@ -52,7 +63,7 @@ class BacktestingEngine(object):
     REALTIME_MODE ='RealTime'       # 逐笔交易计算资金，供策略获取资金容量，计算开仓数量
     FINAL_MODE = 'Final'            # 最后才统计交易，不适合按照百分比等开仓数量计算
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def __init__(self, eventEngine = None):
         """Constructor"""
 
@@ -86,6 +97,7 @@ class BacktestingEngine(object):
         self.priceTick = 0          # 价格最小变动
 
         self.dbClient = None        # 数据库客户端
+        self.dbCollection = None    # 数据库集合
         self.dbCursor = None        # 数据库指针
 
         self.historyData = []       # 历史数据的列表，回测用
@@ -130,7 +142,6 @@ class BacktestingEngine(object):
         self.barTimeInterval = 60          # csv文件，属于K线类型，K线的周期（秒数）,缺省是1分钟
 
         # 费用情况
-
         self.percent = EMPTY_FLOAT
         self.percentLimit = 30              # 投资仓位比例上限
 
@@ -184,7 +195,7 @@ class BacktestingEngine(object):
 
         return self.netCapital, self.avaliable, self.percent, self.percentLimit
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def setStartDate(self, startDate='20100416', initDays=10):
         """设置回测的启动日期"""
         # 储存参数
@@ -194,7 +205,8 @@ class BacktestingEngine(object):
         self.strategyStartDate = datetime.strptime(startDate, '%Y%m%d')
         # 数据准备时间(往前推initDays天)
         self.dataStartDate = self.strategyStartDate - timedelta(initDays)
-    #----------------------------------------------------------------------
+
+    # ----------------------------------------------------------------------
     def setEndDate(self, endDate=''):
         """设置回测的结束日期"""
         self.endDate = endDate
@@ -205,33 +217,32 @@ class BacktestingEngine(object):
         else:
             self.dataEndDate = datetime.now()
 
+    # ----------------------------------------------------------------------
     def setMinDiff(self, minDiff):
         """设置回测品种的最小跳价，用于修正数据"""
         self.minDiff = minDiff
         self.priceTick = minDiff
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def setBacktestingMode(self, mode):
         """设置回测模式"""
         self.mode = mode
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def setDatabase(self, dbName, symbol):
         """设置历史数据所用的数据库"""
         self.dbName = dbName
         self.symbol = symbol
 
+    # ----------------------------------------------------------------------
     def setMarginRate(self, margin_rate):
-
+        """设置保证金比例"""
         if margin_rate!= EMPTY_FLOAT:
             self.margin_rate = margin_rate
 
+    # ----------------------------------------------------------------------
     def qryMarginRate(self,symbol):
-        """
-        根据合约symbol，返回其保证金比率
-        :param symbol: 
-        :return: 
-        """
+        """根据合约symbol，返回其保证金比率"""
         return self.margin_rate
 
     # ----------------------------------------------------------------------
@@ -244,6 +255,7 @@ class BacktestingEngine(object):
         """设置合约大小"""
         self.size = size
 
+    # ----------------------------------------------------------------------
     def qrySize(self,symbol):
         """查询合约的size"""
         return self.size
@@ -258,28 +270,25 @@ class BacktestingEngine(object):
         """设置价格最小变动"""
         self.priceTick = priceTick
         self.minDiff = priceTick
+
+    # ----------------------------------------------------------------------
     def setInitCapital(self, initCapital):
         """设置初始资金"""
         self.initCapital = initCapital
-    def setStrategyName(self,strategy_name):
-        """
-        设置策略的运行实例名称
-        :param strategy_name: 
-        :return: 
-        """
+
+    # ----------------------------------------------------------------------
+    def setStrategyName(self, strategy_name):
+        """设置策略的运行实例名称"""
         self.strategy_name = strategy_name
 
+    # ----------------------------------------------------------------------
     def setDailyReportName(self, report_file):
-        """
-        设置策略的日净值记录csv保存文件名（含路径）
-        :param report_file: 保存文件名（含路径）
-        :return: 
-        """
+        """设置策略的日净值记录csv保存文件名（含路径）"""
         self.daily_report_name = report_file
-    #----------------------------------------------------------------------
+
+    # ----------------------------------------------------------------------
     def connectMysql(self):
         """连接MysqlDB，这里要改为mongoDB"""
-
         # 载入json文件
         fileName = 'mysql_connect.json'
         try:
@@ -309,7 +318,7 @@ class BacktestingEngine(object):
         except Exception:
             self.writeCtaLog(u'回测引擎连接MysqlDB失败')
 
-     #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def loadDataHistoryFromMysql(self, symbol, startDate, endDate):
         """载入历史TICK数据
         如果加载过多数据会导致加载失败,间隔不要超过半年
@@ -342,9 +351,9 @@ class BacktestingEngine(object):
         # 保存本地cache文件
         self.__saveDataHistoryToLocalCache(symbol, startDate, endDate)
 
-
+    # ----------------------------------------------------------------------
     def __loadDataHistoryFromLocalCache(self, symbol, startDate, endDate):
-        """看本地缓存是否存在,这个叼，还能读缓存呢
+        """看本地缓存是否存在
         added by IncenseLee
         """
 
@@ -369,6 +378,7 @@ class BacktestingEngine(object):
                 self.writeCtaLog(u'读取文件{0}失败'.format(cacheFile))
                 return False
 
+    # ----------------------------------------------------------------------
     def __saveDataHistoryToLocalCache(self, symbol, startDate, endDate):
         """保存本地缓存
         added by IncenseLee
@@ -396,7 +406,7 @@ class BacktestingEngine(object):
             cache.close()
             return True
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def __qryDataHistoryFromMysql(self, symbol, startDate, endDate):
         """从Mysql载入历史TICK数据
         added by IncenseLee
@@ -471,6 +481,7 @@ class BacktestingEngine(object):
         except MySQLdb.Error as e:
             self.writeCtaLog(u'MysqlDB载入数据失败，请检查.Error {0}'.format(e))
 
+    # ----------------------------------------------------------------------
     def __dataToTick(self, data):
         """
         数据库查询返回的data结构，转换为tick对象
@@ -529,7 +540,7 @@ class BacktestingEngine(object):
 
         return tick
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def getMysqlDeltaDate(self,symbol, startDate, decreaseDays):
         """从mysql库中获取交易日前若干天
         added by IncenseLee
@@ -640,7 +651,6 @@ class BacktestingEngine(object):
 
             # 夜盘数据
             self.__loadArbTicks(mainPath+'_night', testday, leg1, leg2)
-
 
     def __loadArbTicks(self,mainPath,testday,leg1,leg2):
 
@@ -1235,7 +1245,6 @@ class BacktestingEngine(object):
 
             self.savingDailyData(testday, self.capital, self.maxCapital,self.totalCommission)
 
-
     def __loadTicksFromCsvFile(self, filepath, tickDate, vtSymbol):
         """从csv文件中UnicodeDictReader读取tick"""
         # 先读取数据到Dict，以日期时间为key
@@ -1714,8 +1723,13 @@ class BacktestingEngine(object):
     #----------------------------------------------------------------------
     def runBacktesting(self):
         """运行回测"""
+        # 更新设置期初资金
+        self.capital = self.initCapital
 
-        self.capital = self.initCapital      # 更新设置期初资金
+        # 连接数据库
+        host, port, log = loadMongoSetting()
+        self.dbClient = pymongo.MongoClient(host, port)
+        self.dbCollection = self.dbClient[self.dbName][self.symbol]
 
         # 首先根据回测模式，确认要使用的数据类
         if self.mode == self.BAR_MODE:
@@ -1726,50 +1740,55 @@ class BacktestingEngine(object):
             func = self.newTick
             
         self.output(u'开始回测')
+        self.output(u'开始回放数据')
 
-        self.strategy.inited = True
+        # 初始化策略
+        # 初始化数据的时间范围（前闭后开）
+        flt = {'datetime': {'$gte': self.dataStartDate,
+                            '$lt': self.strategyStartDate}}
+        # 读取数据
+        initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
+        self.initData = []
+        for d in initCursor:
+            data = dataClass()
+            data.__dict__ = d
+            self.initData.append(data)
+        # 策略执行初始化
         self.strategy.onInit()
+        self.strategy.inited = True
         self.output(u'策略初始化完成')
 
-        self.strategy.trading = True
+        # 策略启动
         self.strategy.onStart()
+        self.strategy.trading = True
         self.output(u'策略启动完成')
-
-        self.output(u'开始回放数据')
 
         # 循环加载回放数据
         self.runHistoryDataFromMongo()
 
-
         self.output(u'数据回放结束')
+
+        # 断开数据库
+        self.dbClient.close()
 
     # ----------------------------------------------------------------------
     def runHistoryDataFromMongo(self):
         """
-        根据测试的每一天，从MongoDB载入历史数据，并推送Tick至回测函数
-        :return: 
+        根据测试的每一天，从MongoDB载入历史数据，并推送数据至回测函数
         """
-
-        host, port, log = loadMongoSetting()
-
-        self.dbClient = pymongo.MongoClient(host, port)
-        collection = self.dbClient[self.dbName][self.symbol]
-
-        self.output(u'开始载入数据')
-
         # 首先根据回测模式，确认要使用的数据类
         if self.mode == self.BAR_MODE:
             dataClass = CtaBarData
-            func = self.newBar       # newBar没有执行，下面这个print却有执行，func有问题--陈常鸿--20181009 已解决
-            #print("self.mode == self.BAR_MODE  ---1765")
+            func = self.newBar
         else:
             dataClass = CtaTickData
             func = self.newTick
+
         # 载入回测数据
         if not self.dataEndDate:
             self.dataEndDate = datetime.now()
 
-        testdays = (self.dataEndDate - self.dataStartDate).days
+        testdays = (self.dataEndDate - self.strategyStartDate).days
 
         if testdays < 1:
             self.writeCtaLog(u'回测时间不足')
@@ -1777,34 +1796,33 @@ class BacktestingEngine(object):
 
         # 循环每一天
         for i in range(0, testdays):
-            testday = self.dataStartDate + timedelta(days=i)
+            testday = self.strategyStartDate + timedelta(days=i)
             testday_monrning = testday  #testday.replace(hour=0, minute=0, second=0, microsecond=0)
             testday_midnight = testday + timedelta(days=1) #testday.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-            query_time = datetime.now()
-            # 载入初始化需要用的数据
+            query_time = time.time()
+            # 载入回测需要用的数据（前闭后开）
             flt = {'datetime': {'$gte': testday_monrning,
                                 '$lt': testday_midnight}}
 
-            initCursor = collection.find(flt).sort('datetime', pymongo.ASCENDING)
+            initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
             
-            process_time = datetime.now()
+            process_time = time.time()
             # 将数据从查询指针中读取出，并生成列表
             count_ticks = 0
-            #print("initCursor----1796",initCursor) # that is OK 20181009--hashaki
-            for d in initCursor:              # 从数据库获取数据没问题--陈常鸿 20181009
-                #print("in the initCursor")   # 没有进入循环,initCursor不为空，说明initCursor不可循环，但又没报错？  陈常鸿  20181009
+            for d in initCursor:
                 data = dataClass()
                 data.__dict__ = d
-                func(data)                    # 这里绝壁有问题--陈常鸿
+                func(data)
                 count_ticks += 1
-                #print("-----1802-----",d)     # 没有print出来,添加回测结束日，成功运行过这里 20181009
-            self.output(u'回测日期{0}，数据量：{1}，查询耗时:{2},回测耗时:{3}'
-                        .format(testday.strftime('%Y-%m-%d'), count_ticks, str(datetime.now() - query_time),
-                                str(datetime.now() - process_time)))
+            # 打印日期
+            self.output(u'回测日期{0}，数据量：{1}，查询耗时:{2:.4f}s,回测耗时:{3:.4f}s'
+                        .format(testday.strftime('%Y-%m-%d'), count_ticks, (time.time() - query_time),
+                                (time.time() - process_time)))
             # 记录每日净值
-            self.savingDailyData(testday, self.capital, self.maxCapital,self.totalCommission)
+            self.savingDailyData(testday, self.capital, self.maxCapital, self.totalCommission)
 
+    # ----------------------------------------------------------------------
     def __sendOnBarEvent(self, bar):
         """发送Bar的事件"""
         if self.eventEngine is not None:
@@ -1816,19 +1834,17 @@ class BacktestingEngine(object):
     # ----------------------------------------------------------------------
     def newBar(self, bar):
         """新的K线"""
-        #print("------------new  1819  Bar---------------------")#  bar是一个地址是CtaBarData类型
-        self.bar = bar
-        self.dt = bar.datetime
+        self.bar = bar              # 最新K线对象
+        self.dt = bar.datetime      # 最新K线时间
         self.crossLimitOrder()      # 先撮合限价单
         self.crossStopOrder()       # 再撮合停止单
         self.strategy.onBar(bar)    # 推送K线到策略中
-        self.__sendOnBarEvent(bar)  # 推送K线到事件
-        self.last_bar = bar
+        self.__sendOnBarEvent(bar)  # 推送K线到事件(暂时用不到)
+        self.last_bar = bar         # 保存每日结果要用到
 
     # ----------------------------------------------------------------------
     def newTick(self, tick):
         """新的Tick"""
-        print("------------new  1831 Tick---------------------")
         self.tick = tick
         self.dt = tick.datetime
         self.crossLimitOrder()
@@ -1845,12 +1861,9 @@ class BacktestingEngine(object):
         if not self.strategy.name:
             self.strategy.name = self.strategy.className
 
-        self.strategy.onInit()
-        #self.strategy.onStart()
-
     # ---------------------------------------------------------------------
     def saveStrategyData(self):
-        """保存策略数据"""
+        """保存策略数据, 暂时用不到"""
         if self.strategy is None:
             return
 
@@ -1958,7 +1971,6 @@ class BacktestingEngine(object):
         self.stopOrderDict[stopOrderID] = so
         self.workingStopOrderDict[stopOrderID] = so
 
-
         return stopOrderID
 
     #----------------------------------------------------------------------
@@ -1973,33 +1985,27 @@ class BacktestingEngine(object):
     #----------------------------------------------------------------------
     def crossLimitOrder(self):
         """基于最新数据撮合限价单"""
-        #print("crossLimitOrder-----------------------------------------1973")
         # 先确定会撮合成交的价格
         if self.mode == self.BAR_MODE:
             buyCrossPrice = self.roundToPriceTick(self.bar.low) + self.priceTick        # 若买入方向限价单价格高于该价格，则会成交
             sellCrossPrice = self.roundToPriceTick(self.bar.high) - self.priceTick      # 若卖出方向限价单价格低于该价格，则会成交
             buyBestCrossPrice = self.roundToPriceTick(self.bar.open) + self.priceTick   # 在当前时间点前发出的买入委托可能的最优成交价
             sellBestCrossPrice = self.roundToPriceTick(self.bar.open) - self.priceTick  # 在当前时间点前发出的卖出委托可能的最优成交价
-            vtSymbol = self.bar.vtSymbol       # vtSymbol---IF0000---陈常鸿--20181010
-            #print('-------------------1985-------------',vtSymbol)
         else:
             buyCrossPrice = self.tick.askPrice1
             sellCrossPrice = self.tick.bidPrice1
             buyBestCrossPrice = self.tick.askPrice1
             sellBestCrossPrice = self.tick.bidPrice1
-            vtSymbol = self.tick.vtSymbol
 
-        #print('遍历限价单字典中的所有限价单-------------1992')
+        # 当前存在的限价单循环
         for orderID, order in list(self.workingLimitOrderDict.items()):
-            #print('判断是否会成交--------------------1994')  #进入了循环
             buyCross = order.direction == DIRECTION_LONG and order.price >= buyCrossPrice #and vtSymbol.lower() == order.vtSymbol.lower()
             sellCross = order.direction == DIRECTION_SHORT and order.price <= sellCrossPrice #and vtSymbol.lower() == order.vtSymbol.lower()
-            #print("--------------1997--------------",order.vtSymbol.lower())  # vtSymbol.lower()--if0000  order.vtSymbol.lower()为空
             # 如果发生了成交
             if buyCross or sellCross:
                 # 推送成交数据
                 self.tradeCount += 1            # 成交编号自增1
-                #print("------------发生了成交-----------2002")  #这里没有调用，注释掉vtSymbol后可用
+
                 tradeID = str(self.tradeCount)
                 trade = VtTradeData()
                 trade.vtSymbol = order.vtSymbol
@@ -2031,7 +2037,6 @@ class BacktestingEngine(object):
                 # 推送委托数据
                 order.tradedVolume = order.totalVolume
                 order.status = STATUS_ALLTRADED
-
                 self.strategy.onOrder(order)
 
                 # 从字典中删除该限价单
@@ -2040,30 +2045,25 @@ class BacktestingEngine(object):
                 except Exception as ex:
                     self.writeCtaError(u'crossLimitOrder exception:{},{}'.format(str(ex), traceback.format_exc()))
 
-        # 实时计算模式
+        # 实时计算模式(默认不进行)
         if self.calculateMode == self.REALTIME_MODE:
             self.realtimeCalculate()
-            print("从crossLimitOrder进入realtimeCalculate  2047")
+
     #----------------------------------------------------------------------
     def crossStopOrder(self):
         """基于最新数据撮合停止单"""
-        #print("crossStopOrder-----------------------------------------2046")
         # 先确定会撮合成交的价格，这里和限价单规则相反
         if self.mode == self.BAR_MODE:
             buyCrossPrice = self.bar.high    # 若买入方向停止单价格低于该价格，则会成交
             sellCrossPrice = self.bar.low    # 若卖出方向限价单价格高于该价格，则会成交
             bestCrossPrice = self.bar.open   # 最优成交价，买入停止单不能低于，卖出停止单不能高于
-            vtSymbol = self.bar.vtSymbol
-            #print('------------------------------2059',vtSymbol)
         else:
             buyCrossPrice = self.tick.lastPrice
             sellCrossPrice = self.tick.lastPrice
             bestCrossPrice = self.tick.lastPrice
-            vtSymbol = self.tick.vtSymbol
-        
-        #print('遍历停止单字典中的所有停止单----------2058')
+
+        # 遍历所有在运行的本地停止单
         for stopOrderID, so in list(self.workingStopOrderDict.items()):     # self.workingStopOrderDict.items()转换成list结构，后下面注释能完成
-            #print('判断是否会成交----------------------------2060')  # 这里没有进入循环，20181010 可进入,下面注释掉会出错RuntimeError: dictionary changed size during iteration
             buyCross = so.direction == DIRECTION_LONG and so.price <= buyCrossPrice #and vtSymbol.lower() == so.vtSymbol.lower()
             sellCross = so.direction == DIRECTION_SHORT and so.price >= sellCrossPrice #and vtSymbol.lower() == so.vtSymbol.lower()
 
@@ -2071,7 +2071,6 @@ class BacktestingEngine(object):
             if buyCross or sellCross:
                 # 推送成交数据
                 self.tradeCount += 1            # 成交编号自增1
-                #print("self.tradeCount:------2068",self.tradeCount)#上面的vtSymbol注释掉后可进入
                 tradeID = str(self.tradeCount)
                 trade = VtTradeData()
                 trade.vtSymbol = so.vtSymbol
@@ -2122,10 +2121,9 @@ class BacktestingEngine(object):
                 if stopOrderID in self.workingStopOrderDict:
                     del self.workingStopOrderDict[stopOrderID]
 
-        # 若采用实时计算净值
-        if self.calculateMode == self.REALTIME_MODE:    #没有进入判断--陈常鸿--20181009
+        # 若采用实时计算净值(默认不进行)
+        if self.calculateMode == self.REALTIME_MODE:
             self.realtimeCalculate()
-            print("从crossStopOrder进入realtimeCalculate   -----2128")
 
     #----------------------------------------------------------------------
     def insertData(self, dbName, collectionName, data):
@@ -2133,7 +2131,7 @@ class BacktestingEngine(object):
         pass
     
     #----------------------------------------------------------------------
-    def loadBar(self, dbName, collectionName, startDate):
+    def loadBar(self):
         """直接返回初始化数据列表中的Bar"""
         return self.initData
     
@@ -2172,7 +2170,6 @@ class BacktestingEngine(object):
         """
         filename = os.path.abspath(os.path.join(self.get_logs_path(), '{}'.format(self.strategy_name if len(self.strategy_name) > 0 else 'strategy')))
         self.logger = setup_logger(filename=filename, name=self.strategy_name if len(self.strategy_name) > 0 else 'strategy', debug=debug,backtesing=True)
-
     #----------------------------------------------------------------------
     def writeCtaLog(self, content,strategy_name=None):
         """记录日志"""
@@ -2197,15 +2194,15 @@ class BacktestingEngine(object):
 
     def writeCtaNotification(self,content,strategy_name=None):
         """记录通知"""
-        #print content
         self.output(u'Notify:{}'.format(content))
         self.writeCtaLog(content)
 
-    #----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def output(self, content):
         """输出内容"""
-        #print (str(datetime.now()) + "\t" + content)
+        print (str(datetime.now()) + "\t" + content)
 
+    # ----------------------------------------------------------------------
     def realtimeCalculate(self):
         """实时计算交易结果2
         支持多空仓位并存"""
@@ -2213,7 +2210,6 @@ class BacktestingEngine(object):
         if len(self.tradeDict) < 1: return
 
         tradeids = list(self.tradeDict.keys())
-        print("realtimeCalculate 2210,tradeids:",tradeids,'-------------------')
         #resultDict = OrderedDict()  # 交易结果记录
         resultDict = []
         longid = EMPTY_STRING
@@ -2304,7 +2300,6 @@ class BacktestingEngine(object):
                         self.output(msg)
                         self.writeCtaLog(msg)
                         resultDict.append(result)
-                        print("resultDict 2301:",resultDict)
                         if type(gr) == type(None):
                             if coverVolume > 0:
                                 # 属于组合
@@ -2621,6 +2616,7 @@ class BacktestingEngine(object):
         self.avaliable = self.netCapital - occupyMoney
         self.percent = round(float(occupyMoney * 100 / self.netCapital), 2)
 
+    # ----------------------------------------------------------------------
     def savingDailyData(self, d, c, m, commission, benchmark=0):
         """保存每日数据"""
         dict_ = {}
@@ -2639,7 +2635,6 @@ class BacktestingEngine(object):
             benchmark = benchmark / self.daily_first_benchmark
         else:
             benchmark = 1
-        #print("self.longPosition-----2637",self.longPosition)
         for longpos in self.longPosition:
             symbol = '-' if longpos.vtSymbol == EMPTY_STRING else longpos.vtSymbol
             # 计算持仓浮盈浮亏/占用保证金
@@ -2706,7 +2701,6 @@ class BacktestingEngine(object):
             self.daily_max_drawdown_rate = drawdown_rate
             self.max_drowdown_rate_time = dict_['date']
 
-        #print('hashaki----2703  cta,dict_:',dict_)
     # ----------------------------------------------------------------------
     def writeWenHuaSignal(self, filehandle, count, bardatetime, price, text):
         """
@@ -2754,50 +2748,44 @@ class BacktestingEngine(object):
         增加了支持逐步加仓的计算：
         例如，前面共有6次开仓（1手开仓+5次加仓，每次1手），平仓只有1次（六手）。那么，交易次数是6次（开仓+平仓）。
         暂不支持每次加仓数目不一致的核对（因为比较复杂）
-
         增加组合的支持。（组合中，仍然按照1手逐步加仓和多手平仓的方法，即使启用了复利模式，也仍然按照这个规则，只是在计算收益时才乘以系数）
-
         增加期初权益，每次交易后的权益，可用资金，仓位比例。
-
         """
-        self.output(u'计算回测结果--calculateBacktestingResult 2756') # 该函数能进入，20181010--陈常鸿
+        self.output(u'计算回测结果')
         # 首先基于回测后的成交记录，计算每笔交易的盈亏
         resultDict = OrderedDict()  # 交易结果记录
-        longTrade = []              # 未平仓的多头交易
-        shortTrade = []             # 未平仓的空头交易
+        longTrade = []              # 未平仓的多头交易(动态)
+        shortTrade = []             # 未平仓的空头交易(动态)
 
-        i = 1
-
-        tradeUnit = 1
+        i = 1                    # ??
+        # 获取最小交易单位
+        try:
+            tradeUnit = self.strategy.fixedSize
+        except:
+            tradeUnit = 1  # 最小交易单位
 
         longid = EMPTY_STRING
         shortid = EMPTY_STRING
 
-        for tradeid in self.tradeDict.keys():  # 没有进入循环，self.tradeDict.keys()有问题--修改crossLimitOrder的vtSybol后能过--20181010
-
-            print('tradeid',tradeid)
+        # 所有交易代码循环
+        for tradeid in self.tradeDict.keys():
             trade = self.tradeDict[tradeid]
-            
-            # 多头交易 $没有能够进入到resultDict赋值那一步，所以没有交易记录--20181010
+            # 多头交易
             if trade.direction == DIRECTION_LONG:
-                print("-------2786-------------")
-                # 如果尚无空头交易
+                # 如果尚无空头交易(说明是开多)
                 if not shortTrade:
                     longTrade.append(trade)
                     longid = tradeid
-                    print("---------2791----------------")
                 # 当前多头交易为平空
                 else:
                     gId = i     # 交易组（多个平仓数为一组）
                     gt = 1      # 组合的交易次数
                     gr = None   # 组合的交易结果
-                    print("-----------2797----------------")
+                    # 如果成交成交量大于交易
                     if trade.volume >tradeUnit:
                         self.writeCtaLog(u'平仓数{0},组合编号:{1}'.format(trade.volume,gId))
                         gt = int(trade.volume/tradeUnit)
-                        print("----------2801-----------------")
                     for tv in range(gt):
-                        print("--------2803------------")
                         entryTrade = shortTrade.pop(0)
 
                         result = TradingResult(entryPrice=entryTrade.price,
@@ -2812,9 +2800,7 @@ class BacktestingEngine(object):
                                                fixcommission=self.fixCommission)
 
                         if tv == 0:
-                            print("--------2818--------------")
                             if gt == 1:
-                                print("----------2820-----------")
                                 resultDict[entryTrade.dt] = result
                             else:
                                 gr = copy.deepcopy(result)
@@ -2825,7 +2811,6 @@ class BacktestingEngine(object):
                             gr.pnl = gr.pnl + result.pnl
 
                             if tv == gt -1:
-                                print("-------2831---------")
                                 gr.volume = trade.volume
                                 resultDict[entryTrade.dt] = gr
 
@@ -2855,7 +2840,6 @@ class BacktestingEngine(object):
 
             # 空头交易        
             else:
-                print("------2861--------")
                 # 如果尚无多头交易
                 if not longTrade:
                     shortTrade.append(trade)
@@ -2871,7 +2855,6 @@ class BacktestingEngine(object):
                         gt = int(trade.volume/tradeUnit)
 
                     for tv in range(gt):
-
                         entryTrade = longTrade.pop(0)
 
                         result = TradingResult(entryPrice=entryTrade.price,
@@ -2902,7 +2885,6 @@ class BacktestingEngine(object):
                         t = OrderedDict()
                         t['Gid'] = gId
                         t['vtSymbol'] = entryTrade.vtSymbol
-                        print("------------2906---------",entryTrade.tradeTime)
                         t['OpenTime'] = datetime.strptime(entryTrade.tradeTime,'%Y-%m-%d %H:%M:%S').strftime('%Y/%m/%d %H:%M:%S')
                         t['OpenPrice'] = entryTrade.price
                         t['Direction'] = u'Long'
@@ -2957,9 +2939,7 @@ class BacktestingEngine(object):
 
         drawdown = 0            # 回撤
         compounding = 1        # 简单的复利基数（如果资金是期初资金的x倍，就扩大开仓比例,例如3w开1手，6w开2手，12w开4手)
-        print("---------------2956-----------",resultDict.items())
         for time, result in resultDict.items():
-            #print('-----2958-------',result)  #没进入这里,一顿修改时候能进入了
             # 是否使用简单复利
             if self.usageCompounding:
                 compounding = int(self.capital/self.initCapital)
@@ -3104,7 +3084,6 @@ class BacktestingEngine(object):
         d['maxCapital'] = self.maxNetCapital    # 取消原 maxCapital
 
         if len(self.pnlList)  == 0:     # 这个变量会是空，所以一定会返回{}
-            print("当你看到这个说明self.pnlList为空，没有回测结果--------3101")
             return {}
 
         d['maxPnl'] = max(self.pnlList)

@@ -2,6 +2,14 @@
 
 """
 展示如何执行策略回测。
+
+最新修改日志：
+作者: 陈卓杰
+时间: 2018/10/12 12:06
+内容：
+(1) 使用的策略为双均线策略, 数据为数字货币XBT合约;
+(2) 添加了合约保证金比例的设置, 初始资金的设置, 和策略名的设置;
+
 """
 
 from __future__ import division
@@ -11,7 +19,7 @@ from vnpy.trader.app.ctaStrategy.ctaBacktesting import BacktestingEngine, MINUTE
 
 
 if __name__ == '__main__':
-    from vnpy.trader.app.ctaStrategy.strategy.strategyAtrRsi import AtrRsiStrategy
+    from vnpy.trader.app.ctaStrategy.strategy.strategy_DoubleMA import DoubleMA1Strategy
 
     # 创建回测引擎
     engine = BacktestingEngine()
@@ -19,21 +27,29 @@ if __name__ == '__main__':
     # 设置引擎的回测模式为K线
     engine.setBacktestingMode(engine.BAR_MODE)
 
-    # 设置回测用的数据起始日期
-    engine.setStartDate('20170701')
-    engine.setEndDate('20170830')   # 添加结束日期，顺利运行到crossStopOrder()和crossLimitOrder()
+    # 设置回测时间的范围
+    engine.setStartDate('20180201',initDays=10)  # 第一个参数为策略开始日期, 第二个参数为往前加载多少天的数据来准备变量
+    engine.setEndDate('20180901')                # 策略结束日期
+
     # 设置产品相关参数
-    engine.setSlippage(0.2)     # 股指1跳
-    engine.setRate(0.3/10000)   # 万0.3
-    engine.setSize(300)         # 股指合约大小 
-    engine.setPriceTick(0.2)    # 股指最小价格变动
+    engine.setSlippage(0.5)     # 设置滑点, 设为1个跳
+    engine.setRate(2/10000)     # 手续费, 先设为万2
+    engine.setSize(1)           # 合约价值, 先设定为1
+    engine.setMarginRate(0.01)  # 设置合约保证金比例, 这里为100倍
+    engine.setPriceTick(0.5)    # bitmex.XBTUSE最小价格变动
+
+    # 设置测试的初始资金
+    engine.setInitCapital(1000000)  # 设置为100w
 
     # 设置使用的历史数据库
-    engine.setDatabase(MINUTE_DB_NAME, 'IF0000')
+    engine.setDatabase("Digital_30Min_Db", "bitmex.XBTUSD")
+
+    # 设置策略名
+    engine.setStrategyName("strategy_DoubleMA")
 
     # 在引擎中创建策略对象
-    d = {'atrLength': 11}
-    engine.initStrategy(AtrRsiStrategy, d)
+    d = {"ma1": 20, "ma2": 60, "fixedSize":3}
+    engine.initStrategy(DoubleMA1Strategy, d)
     
     # 开始跑回测
     engine.runBacktesting()
