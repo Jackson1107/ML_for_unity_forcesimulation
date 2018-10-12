@@ -1,6 +1,15 @@
+一、回测引擎更新日志1
+作者: 陈卓杰
+时间: 2018/10/12 12:03
+改动文件：runBacktesting.py, ctaBacktesting.py, ctaTemplate.py
+同时新增一个策略文件：strategy_DoubleMA.py
+
+1、runBacktesting.py改动说明
+(1) 使用的策略为双均线策略, 数据为数字货币XBT合约;
+(2) 添加了合约保证金比例的设置, 初始资金的设置, 和策略名的设置
 
 
-1、ctaBacktesing.py
+2、ctaBacktesing.py变动说明
 
 (1) 大约1838行, initStrategy()函数：
 注释掉self.strategy.onInit(), 原因是此时初始化数据还没准备好, 执行策略的初始化没有意义。
@@ -62,9 +71,24 @@
 (7) runHistoryDataFromMongo()函数，大约1809行，修改为：
             initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
             
- 
+(8) 大约在2763行，calculateBacktestingResult(), 修改为：
+        # 获取最小交易单位
+        try:
+            tradeUnit = self.strategy.fixedSize
+        except:
+            tradeUnit = 1  # 最小交易单位
+
+        longid = EMPTY_STRING
+        shortid = EMPTY_STRING
 
 
+3、ctaTemplate.py变动说明
+
+(1) 242行loadBar()函数修改为：
+    #----------------------------------------------------------------------
+    def loadBar(self):
+        """读取bar数据"""
+        return self.ctaEngine.loadBar()
 
 
 
