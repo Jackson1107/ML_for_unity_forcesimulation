@@ -1,5 +1,73 @@
 
-1、增加初始资金设置
+
+1、ctaBacktesing.py
+
+(1) 大约1838行, initStrategy()函数：
+注释掉self.strategy.onInit(), 原因是此时初始化数据还没准备好, 执行策略的初始化没有意义。
+
+连接数据库、初始化数据读取部分大改
+
+(2) 在104行添加：self.dbCollection = None    # 数据库集合
+
+(3) 在大约1733行 runBacktesting()函数里面添加：
+        # 连接数据库
+        host, port, log = loadMongoSetting()
+        self.dbClient = pymongo.MongoClient(host, port)
+        self.dbCollection = self.dbClient[self.dbName][self.symbol]
+        
+(4) 大约在1748行，runBacktesting()函数func = self.newTick之后全部修改为：
+        self.output(u'开始回测')
+        self.output(u'开始回放数据')
+
+        # 初始化策略
+        # 初始化数据的时间范围（前闭后开）
+        flt = {'datetime': {'$gte': self.dataStartDate,
+                            '$lt': self.strategyStartDate}}
+        # 读取数据
+        initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
+        self.initData = []
+        for d in initCursor:
+            data = dataClass()
+            data.__dict__ = d
+            self.initData.append(data)
+        # 策略执行初始化
+        self.strategy.onInit()
+        self.strategy.inited = True
+        self.output(u'策略初始化完成')
+
+        # 策略启动
+        self.strategy.onStart()
+        self.strategy.trading = True
+        self.output(u'策略启动完成')
+
+        # 循环加载回放数据
+        self.runHistoryDataFromMongo()
+
+        self.output(u'数据回放结束')
+
+(5) 大约在1770附近，runHistoryDataFromMongo()函数，删除前面的：
+        host, port, log = loadMongoSetting()
+
+        self.dbClient = pymongo.MongoClient(host, port)
+        collection = self.dbClient[self.dbName][self.symbol]
+
+        self.output(u'开始载入数据')
+        
+(6) runHistoryDataFromMongo()函数，大约1792行，修改为：
+        testdays = (self.dataEndDate - self.strategyStartDate).days
+  
+(6) runHistoryDataFromMongo()函数，大约1800行，修改为：
+            testday = self.strategyStartDate + timedelta(days=i)
+            
+(7) runHistoryDataFromMongo()函数，大约1809行，修改为：
+            initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
+            
+ 
+
+
+
+
+
 
 
 
