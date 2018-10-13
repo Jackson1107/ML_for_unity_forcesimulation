@@ -159,7 +159,8 @@
         # 断开数据库
         self.dbClient.close()
 
-(2) 
+(2) 删除每次计算交易对以后的保存数据部分，self.exportTradeList.append(t)
+删除每次计算交易result后的输出日志
 
 
 
