@@ -162,6 +162,12 @@
 (2) 删除每次计算交易对以后的保存数据部分，self.exportTradeList.append(t)
 删除每次计算交易result后的输出日志
 
+(3) 在3035行附近，添加一个新的函数 def calculateBacktestingResult2(self)
+该函数跟原版的vnpy非常接近
+
+(4) 在3768行左右，class OptimizationSetting(object)下面，插入
+class DailyResult(object) 类，和vnpy的一样，主要是用于创建每日交易结果对象
+
 
 
 
