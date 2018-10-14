@@ -181,9 +181,10 @@ class DailyResult(object) 类，和vnpy的一样，主要是用于创建每日�
 
 
 (6) 大约在3252行，在函数def updateDailyClose(self, dt, price)下面，
-插入def calculateDailyResult(self)函数，和vnpy一样
+创建def calculateDailyResult(self)函数，和vnpy一样
 
-
+(7) 大约在3481行，在函数def exportTradeResult(self)下面，创建一个新的函数
+def exportBacktestResult(self)， 用于保存结果
 
 
 
