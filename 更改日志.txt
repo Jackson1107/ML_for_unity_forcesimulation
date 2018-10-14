@@ -168,8 +168,20 @@
 (4) 在3768行左右，class OptimizationSetting(object)下面，插入
 class DailyResult(object) 类，和vnpy的一样，主要是用于创建每日交易结果对象
 
+(5) 大约在3247行，calculateBacktestingResult2(self)函数下面，插入每日收盘价的函数：
+    # ----------------------------------------------------------------------
+    def updateDailyClose(self, dt, price):
+        """更新每日收盘价"""
+        date = dt.date()
+
+        if date not in self.dailyResultDict:
+            self.dailyResultDict[date] = DailyResult(date, price)
+        else:
+            self.dailyResultDict[date].closePrice = price
 
 
+(6) 大约在3252行，在函数def updateDailyClose(self, dt, price)下面，
+插入def calculateDailyResult(self)函数，和vnpy一样
 
 
 
