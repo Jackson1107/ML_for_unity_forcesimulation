@@ -96,7 +96,7 @@
 二、回测引擎更新日志2
 
 作者: 陈卓杰
-时间: 2018/10/xx xx:xx
+时间: 2018/10/15 12:00
 改动文件：runBacktesting.py, ctaBacktesting.py, ctaTemplate.py
 
 1、runBacktesting.py
