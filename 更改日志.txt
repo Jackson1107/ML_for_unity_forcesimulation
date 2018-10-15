@@ -101,101 +101,29 @@
 
 1、runBacktesting.py
 
-(1) 增加一个新的回测函数，runBacktestingSimple()，在1724行：
-    # ----------------------------------------------------------------------
-    def runBacktestingSimple(self):
-        """简单回测模式, 所有数据一次循环"""
-        # 更新设置期初资金
-        self.capital = self.initCapital
+(1) 添加一个新的回测函数，runBacktestingSimple(), 一次性推送完数据, 而不是每一天读取和推送
+大约在1750行;
 
-        # 连接数据库
-        host, port, log = loadMongoSetting()
-        self.dbClient = pymongo.MongoClient(host, port)
-        self.dbCollection = self.dbClient[self.dbName][self.symbol]
+(2) 添加了几个引擎变量, self.dailyResultDict, self.dfDaily, self.resultDaily,
+self.resultTrade, self.tradeResultListz, self.strategySavingPath, 主要用于评价指标的计算,
+在__init__() 函数中声明;
 
-        # 首先根据回测模式，确认要使用的数据类
-        if self.mode == self.BAR_MODE:
-            dataClass = CtaBarData
-            func = self.newBar
-        else:
-            dataClass = CtaTickData
-            func = self.newTick
+(3) 添加一个新的计算回测结果程序, calculateBacktestingResult2(), 原理与原版的vnpy一致
+大约在3079行;
 
-        self.output(u'开始回测')
-        self.output(u'数据回放开始')
+(4) 添加了一个记录每日收益的类 DailyResult, 大约在4068行;
 
-        # 初始化策略
-        # 初始化数据的时间范围（前闭后开）
-        flt = {'datetime': {'$gte': self.dataStartDate,
-                            '$lt': self.strategyStartDate}}
-        # 读取数据
-        initCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
-        self.initData = []
-        for d in initCursor:
-            data = dataClass()
-            data.__dict__ = d
-            self.initData.append(data)
-        # 策略执行初始化
-        self.strategy.onInit()
-        self.strategy.inited = True
-        self.output(u'策略初始化完成')
+(5) 添加了一个更新每日收盘价的函数, updateDailyClose(), 大约在3289行;
 
-        # 策略启动
-        self.strategy.onStart()
-        self.strategy.trading = True
-        self.output(u'策略启动完成')
+(6) 添加了一个计算日线相关指标的函数, calculateDailyResult(), 大约在3299行;
 
-        # 读取回测数据
-        flt = {'datetime': {'$gte': self.strategyStartDate,
-                            '$lte': self.dataEndDate}}
-        dataCursor = self.dbCollection.find(flt).sort('datetime', pymongo.ASCENDING)
-        for d in dataCursor:
-            data = dataClass()
-            data.__dict__ = d
-            func(data)
+(7) 添加了一个计算交易收益和日线收益的集合函数, showBacktestingResult2(), 大约在3711行;
 
-        self.output(u'数据回放结束')
+(8) 添加了一个导出成交记录和每日净值csv的函数, exportBacktestResult(), 大约在3535行;
 
-        # 断开数据库
-        self.dbClient.close()
+(9) 添加了一个打印策略评价指标并将其保存到本地txt文件的函数, writeEvaluation(), 大约在2286行;
 
-(2) 删除每次计算交易对以后的保存数据部分，self.exportTradeList.append(t)
-删除每次计算交易result后的输出日志
-
-(3) 在3035行附近，添加一个新的函数 def calculateBacktestingResult2(self)
-该函数跟原版的vnpy非常接近
-
-(4) 在3768行左右，class OptimizationSetting(object)下面，插入
-class DailyResult(object) 类，和vnpy的一样，主要是用于创建每日交易结果对象
-
-(5) 大约在3247行，calculateBacktestingResult2(self)函数下面，插入每日收盘价的函数：
-    # ----------------------------------------------------------------------
-    def updateDailyClose(self, dt, price):
-        """更新每日收盘价"""
-        date = dt.date()
-
-        if date not in self.dailyResultDict:
-            self.dailyResultDict[date] = DailyResult(date, price)
-        else:
-            self.dailyResultDict[date].closePrice = price
-
-
-(6) 大约在3252行，在函数def updateDailyClose(self, dt, price)下面，
-创建def calculateDailyResult(self)函数，和vnpy一样
-
-(7) 大约在3481行，在函数def exportTradeResult(self)下面，创建一个新的函数
-def exportBacktestResult(self)， 用于保存结果
-
-(8) 大约在2270行，在writeCtaNotification函数下面，创建一个新的函数
-writeEvaluation，用于打印策略评价指标并将其保存到本地txt文件中
-
-(9) 大约在3777行，在showBacktestingResult2下面，创建一个画图的函数
-plotResult()
-
-
-
-
-
+(10) 添加了一个单独画图的函数, plotResult(), 大约在3799行.
 
 
 
