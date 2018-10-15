@@ -5,16 +5,15 @@
 
 最新修改日志：
 作者: 陈卓杰
-时间: 2018/10/12 12:06
+时间: 2018/10/15 12:00
 内容：
 (1) 使用的策略为双均线策略, 数据为数字货币XBT合约;
-(2) 添加了合约保证金比例的设置, 初始资金的设置, 和策略名的设置;
+(2) 添加了合约保证金比例的设置, 初始资金的设置的设置;
 
 """
 
 from __future__ import division
-
-
+import time
 from vnpy.trader.app.ctaStrategy.ctaBacktesting import BacktestingEngine, MINUTE_DB_NAME
 
 
@@ -39,20 +38,23 @@ if __name__ == '__main__':
     engine.setPriceTick(0.5)    # bitmex.XBTUSE最小价格变动
 
     # 设置测试的初始资金
-    engine.setInitCapital(1000000)  # 设置为100w
+    engine.setInitCapital(100000)  # 设置为10w
 
     # 设置使用的历史数据库
     engine.setDatabase("Digital_30Min_Db", "bitmex.XBTUSD")
 
-    # 设置策略名
-    engine.setStrategyName("strategy_DoubleMA")
-
     # 在引擎中创建策略对象
     d = {"ma1": 20, "ma2": 60, "fixedSize":3}
     engine.initStrategy(DoubleMA1Strategy, d)
-    
+
+    t1 = time.time()
     # 开始跑回测
-    engine.runBacktesting()
+    engine.runBacktestingSimple()
 
     # 显示回测结果
-    engine.showBacktestingResult()
+    engine.showBacktestingResult2()
+
+    # 画图
+    engine.plotResult(saving=True)
+
+    print(u"回测部分耗时:{:.2f}s".format(time.time()-t1))
