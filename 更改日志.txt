@@ -186,6 +186,12 @@ class DailyResult(object) 类，和vnpy的一样，主要是用于创建每日�
 (7) 大约在3481行，在函数def exportTradeResult(self)下面，创建一个新的函数
 def exportBacktestResult(self)， 用于保存结果
 
+(8) 大约在2270行，在writeCtaNotification函数下面，创建一个新的函数
+writeEvaluation，用于打印策略评价指标并将其保存到本地txt文件中
+
+(9) 大约在3777行，在showBacktestingResult2下面，创建一个画图的函数
+plotResult()
+
 
 
 
