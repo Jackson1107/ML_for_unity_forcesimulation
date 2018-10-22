@@ -127,6 +127,27 @@ self.resultTrade, self.tradeResultListz, self.strategySavingPath, 主要用于�
 
 
 
+三、回测引擎更新日志3
+
+作者: 陈卓杰
+时间: 2018/10/22 xx:xx
+改动文件：runBacktesting.py, ctaBacktesting.py, ctaTemplate.py
+
+1、runBacktesting.py改动
+
+(1) 删除了套利回测函数, 删除了除了mongodb以外的数据读取方式, 删除了其他的回测函数, 只保留用到的回测函数；
+
+(2) 在runBacktestingSimple()中使用新的K线对象；
+
+(3)
+
+
+
+
+
+
+
+
 
 
 
