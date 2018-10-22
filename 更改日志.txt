@@ -139,7 +139,7 @@ self.resultTrade, self.tradeResultListz, self.strategySavingPath, 主要用于�
 
 (2) 在runBacktestingSimple()中使用新的K线对象；
 
-(3)
+
 
 
 
